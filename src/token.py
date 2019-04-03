@@ -16,6 +16,7 @@ class TType(Enum):
     LT = 11
     GTE = 12
     LTE = 13
+    RIM = 14
 
 
 class Token:

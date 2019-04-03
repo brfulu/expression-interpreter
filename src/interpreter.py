@@ -1,6 +1,6 @@
 from token import TType
 from lexer import Lexer
-
+from romans import Romans
 
 class Interpreter:
     def __init__(self):
@@ -8,6 +8,7 @@ class Interpreter:
         self.lexer = None
         self.current_token = None
         self.vars = {}
+        self.romans = Romans()
 
     def error(self):
         raise Exception('Greska u parsiranju')
@@ -35,6 +36,10 @@ class Interpreter:
                 if token.value not in self.vars:
                     self.vars[token.value] = 0
                 return self.vars[token.value]
+        elif token.type == TType.RIM:
+            roman_num = token.value[4:(token.value.index(')'))]
+            self.eat(TType.RIM)
+            return self.romans.to_dec(roman_num)
         elif token.type == TType.LPAREN:
             self.eat(TType.LPAREN)
             result = self.expr()
@@ -144,10 +149,12 @@ class Interpreter:
 
         while self.current_token.type != TType.EOF:
             token = self.current_token
-            if token.type in [TType.INTEGER, TType.VAR]:
+            if token.type in [TType.INTEGER, TType.VAR, TType.RIM]:
                 operands.append(token.value)
                 self.eat(token.type)
             elif token.type in [TType.PLUS, TType.MINUS, TType.MUL, TType.DIV, TType.ASSIGN]:
+                if len(operands) < 2:
+                    self.error()
                 left = operands.pop()
                 right = operands.pop()
                 if is_postfix:

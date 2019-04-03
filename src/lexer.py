@@ -28,13 +28,24 @@ class Lexer:
             self.advance()
         return Token(TType.INTEGER, int(number))
 
-    def variable(self):
-        var = ''
+    def variable_or_rim(self):
+        temp = ''
         while self.current_char is not None and (
                 self.current_char.isdigit() or self.current_char.isalpha() or self.current_char == '_'):
-            var += self.current_char
+            temp += self.current_char
             self.advance()
-        return Token(TType.VAR, var)
+
+        if temp == 'RIM' and self.current_char == '(':
+            value = ''
+            self.advance()
+            while self.current_char != ')':
+                value += self.current_char
+                self.advance()
+            self.advance()
+            return Token(TType.RIM, 'RIM({})'.format(value.upper()))
+
+        else:
+            return Token(TType.VAR, temp)
 
     def get_next_token(self):
         while self.current_char is not None:
@@ -42,7 +53,7 @@ class Lexer:
                 self.skip_whitespace()
 
             if self.current_char.isalpha():
-                return self.variable()
+                return self.variable_or_rim()
 
             if self.current_char.isdigit():
                 return self.integer()
