@@ -1,92 +1,13 @@
-from enum import Enum
-
-
-class TType(Enum):
-    INTEGER = 0
-    PLUS = 1
-    MINUS = 2
-    MUL = 3
-    DIV = 4
-    EOF = 5
-    LPAREN = 6
-    RPAREN = 7
-
-
-class Token:
-    def __init__(self, token_type, value):
-        self.type = token_type
-        self.value = value
-
-    def __repr__(self):
-        return "<{}, {}>".format(self.type, self.value)
-
-
-class Lexer:
-    def __init__(self, text):
-        self.pos = 0
-        self.text = text
-        self.current_char = self.text[self.pos]
-
-    def error(self):
-        raise Exception('Neocekivani karakter {}'.format(self.current_char))
-
-    def advance(self):
-        self.pos += 1
-        if self.pos > len(self.text) - 1:
-            self.current_char = None
-        else:
-            self.current_char = self.text[self.pos]
-
-    def skip_whitespace(self):
-        while self.current_char is not None and self.current_char.isspace():
-            self.advance()
-
-    def integer(self):
-        number = ''
-        while self.current_char is not None and self.current_char.isdigit():
-            number += self.current_char
-            self.advance()
-        return Token(TType.INTEGER, int(number))
-
-    def get_next_token(self):
-        while self.current_char is not None:
-            if self.current_char.isspace():
-                self.skip_whitespace()
-
-            if self.current_char.isdigit():
-                return self.integer()
-
-            if self.current_char == '+':
-                self.advance()
-                return Token(TType.PLUS, '+')
-
-            if self.current_char == '-':
-                self.advance()
-                return Token(TType.MINUS, '-')
-
-            if self.current_char == '*':
-                self.advance()
-                return Token(TType.MUL, '*')
-
-            if self.current_char == '/':
-                self.advance()
-                return Token(TType.DIV, '/')
-
-            if self.current_char == '(':
-                self.advance()
-                return Token(TType.LPAREN, '(')
-
-            if self.current_char == ')':
-                self.advance()
-                return Token(TType.RPAREN, ')')
-
-        return Token(TType.EOF, None)
+from token import TType
+from lexer import Lexer
 
 
 class Interpreter:
-    def __init__(self, lexer):
-        self.lexer = lexer
-        self.current_token = self.lexer.get_next_token()
+    def __init__(self):
+        self.mode = 'INFIX'
+        self.lexer = None
+        self.current_token = None
+        self.vars = {}
 
     def error(self):
         raise Exception('Greska u parsiranju')
@@ -103,6 +24,17 @@ class Interpreter:
         if token.type == TType.INTEGER:
             self.eat(TType.INTEGER)
             return token.value
+        elif token.type == TType.VAR:
+            self.eat(TType.VAR)
+            if self.current_token.type == TType.ASSIGN:
+                self.eat(TType.ASSIGN)
+                result = self.expr()
+                self.vars[token.value] = result
+                return result
+            else:
+                if token.value not in self.vars:
+                    self.vars[token.value] = 0
+                return self.vars[token.value]
         elif token.type == TType.LPAREN:
             self.eat(TType.LPAREN)
             result = self.expr()
@@ -111,7 +43,6 @@ class Interpreter:
 
     def term(self):
         # 2 * (9) / 6 * 8 * 5
-
         result = self.factor()
 
         while self.current_token.type in (TType.MUL, TType.DIV):
@@ -129,7 +60,6 @@ class Interpreter:
 
     def expr(self):
         # 1 + 3 * 8 / 3 + 9 - 9
-
         result = self.term()
 
         while self.current_token.type in (TType.PLUS, TType.MINUS):
@@ -145,25 +75,54 @@ class Interpreter:
 
         return result
 
+    def eval_infix(self, text):
+        print(text)
+        self.lexer = Lexer(text)
+        self.current_token = self.lexer.get_next_token()
+        return self.expr()
 
-def main():
-    while True:
-        try:
-            text = input('--> ')
-        except EOFError:
-            break
+    def eval(self, text, mode):
+        if mode == 'INFIX':
+            return self.eval_infix(text)
+        elif mode == 'POSTFIX':
+            return self.eval_infix(self.postfix_to_infix(text))
+        elif mode == 'PREFIX':
+            return self.eval_infix(self.prefix_to_infix(text))
+        else:
+            self.error()
 
-        if not text:
-            continue
+    def postfix_to_infix(self, text):
+        return self.convert_to_infix(text, True)
 
-        if text == 'exit':
-            break
+    def prefix_to_infix(self, text):
+        self.lexer = Lexer(text)
+        self.current_token = self.lexer.get_next_token()
+        tokens = []
+        while self.current_token.type != TType.EOF:
+            tokens.append(self.current_token.value)
+            self.eat(self.current_token.type)
 
-        lexer = Lexer(text)
-        interpreter = Interpreter(lexer)
-        result = interpreter.expr()
-        print(result)
+        reverse_text = ' '.join(str(token) for token in reversed(tokens))
+        return self.convert_to_infix(reverse_text, False)
 
+    def convert_to_infix(self, text, is_postfix):
+        self.lexer = Lexer(text)
+        self.current_token = self.lexer.get_next_token()
+        operands = []
 
-if __name__ == "__main__":
-    main()
+        while self.current_token.type != TType.EOF:
+            token = self.current_token
+            if token.type in [TType.INTEGER, TType.VAR]:
+                operands.append(token.value)
+                self.eat(token.type)
+            elif token.type in [TType.PLUS, TType.MINUS, TType.MUL, TType.DIV, TType.ASSIGN]:
+                left = operands.pop()
+                right = operands.pop()
+                if is_postfix:
+                    left, right = right, left
+                operands.append('({}{}{})'.format(left, token.value, right))
+                self.eat(token.type)
+            else:
+                self.error()
+
+        return operands.pop()
