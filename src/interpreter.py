@@ -73,13 +73,45 @@ class Interpreter:
             else:
                 self.error()
 
-        return result
+        return round(result)
+
+    def multi_expr(self):
+        is_multi_expr = False
+        result = True
+        left_expr = self.expr()
+
+        while self.current_token.type in (TType.GT, TType.GTE, TType.LT, TType.LTE):
+            is_multi_expr = True
+            token = self.current_token
+
+            if token.type == TType.GT:
+                self.eat(TType.GT)
+                right_expr = self.expr()
+                result &= (left_expr > right_expr)
+            elif token.type == TType.GTE:
+                self.eat(TType.GTE)
+                right_expr = self.expr()
+                result &= (left_expr >= right_expr)
+            elif token.type == TType.LT:
+                self.eat(TType.LT)
+                right_expr = self.expr()
+                result &= (left_expr < right_expr)
+            elif token.type == TType.LTE:
+                self.eat(TType.LTE)
+                right_expr = self.expr()
+                result &= (left_expr <= right_expr)
+            else:
+                self.error()
+
+            left_expr = right_expr
+
+        return result if is_multi_expr else left_expr
 
     def eval_infix(self, text):
         print(text)
         self.lexer = Lexer(text)
         self.current_token = self.lexer.get_next_token()
-        return self.expr()
+        return self.multi_expr()
 
     def eval(self, text, mode):
         if mode == 'INFIX':

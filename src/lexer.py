@@ -75,4 +75,20 @@ class Lexer:
                 self.advance()
                 return Token(TType.ASSIGN, '=')
 
+            if self.current_char == '>':
+                self.advance()
+                if self.current_char == '=':
+                    self.advance()
+                    return Token(TType.GTE, '>=')
+                else:
+                    return Token(TType.GT, '>')
+
+            if self.current_char == '<':
+                self.advance()
+                if self.current_char == '=':
+                    self.advance()
+                    return Token(TType.LTE, '<=')
+                else:
+                    return Token(TType.LT, '<')
+
         return Token(TType.EOF, None)

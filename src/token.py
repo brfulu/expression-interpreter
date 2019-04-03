@@ -12,6 +12,10 @@ class TType(Enum):
     RPAREN = 7
     VAR = 8
     ASSIGN = 9
+    GT = 10
+    LT = 11
+    GTE = 12
+    LTE = 13
 
 
 class Token:
