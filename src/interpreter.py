@@ -45,6 +45,8 @@ class Interpreter:
             result = self.expr()
             self.eat(TType.RPAREN)
             return result
+        else:
+            self.error()
 
     def term(self):
         # 2 * (9) / 6 * 8 * 5
@@ -85,7 +87,7 @@ class Interpreter:
         result = True
         left_expr = self.expr()
 
-        while self.current_token.type in (TType.GT, TType.GTE, TType.LT, TType.LTE):
+        while self.current_token.type in (TType.GT, TType.GTE, TType.LT, TType.LTE, TType.EQ, TType.NE):
             is_multi_expr = True
             token = self.current_token
 
@@ -105,10 +107,21 @@ class Interpreter:
                 self.eat(TType.LTE)
                 right_expr = self.expr()
                 result &= (left_expr <= right_expr)
+            elif token.type == TType.EQ:
+                self.eat(TType.EQ)
+                right_expr = self.expr()
+                result &= (left_expr == right_expr)
+            elif token.type == TType.NE:
+                self.eat(TType.NE)
+                right_expr = self.expr()
+                result &= (left_expr != right_expr)
             else:
                 self.error()
 
             left_expr = right_expr
+
+        if self.current_token.type != TType.EOF:
+            self.error()
 
         return result if is_multi_expr else left_expr
 

@@ -40,10 +40,14 @@ class Lexer:
             self.advance()
             while self.current_char != ')':
                 value += self.current_char
-                self.advance()
+                if not self.current_char.upper() in 'IVXLCDM':
+                    self.error()
+                else:
+                    self.advance()
             self.advance()
             return Token(TType.RIM, 'RIM({})'.format(value.upper()))
-
+        elif self.current_char == '(':
+            self.error()
         else:
             return Token(TType.VAR, temp)
 
@@ -52,41 +56,53 @@ class Lexer:
             if self.current_char.isspace():
                 self.skip_whitespace()
 
-            if self.current_char.isalpha():
+            elif self.current_char.isalpha():
                 return self.variable_or_rim()
 
-            if self.current_char.isdigit():
+            elif self.current_char.isdigit():
                 return self.integer()
 
-            if self.current_char == '+':
+            elif self.current_char == '+':
                 self.advance()
                 return Token(TType.PLUS, '+')
 
-            if self.current_char == '-':
+            elif self.current_char == '-':
                 self.advance()
                 return Token(TType.MINUS, '-')
 
-            if self.current_char == '*':
+            elif self.current_char == '*':
                 self.advance()
                 return Token(TType.MUL, '*')
 
-            if self.current_char == '/':
+            elif self.current_char == '/':
                 self.advance()
                 return Token(TType.DIV, '/')
 
-            if self.current_char == '(':
+            elif self.current_char == '(':
                 self.advance()
                 return Token(TType.LPAREN, '(')
 
-            if self.current_char == ')':
+            elif self.current_char == ')':
                 self.advance()
                 return Token(TType.RPAREN, ')')
 
-            if self.current_char == '=':
+            elif self.current_char == '=':
                 self.advance()
-                return Token(TType.ASSIGN, '=')
+                if self.current_char == '=':
+                    self.advance()
+                    return Token(TType.EQ, '==')
+                else:
+                    return Token(TType.ASSIGN, '=')
 
-            if self.current_char == '>':
+            elif self.current_char == '!':
+                self.advance()
+                if self.current_char == '=':
+                    self.advance()
+                    return Token(TType.NE, '!=')
+                else:
+                    self.error()
+
+            elif self.current_char == '>':
                 self.advance()
                 if self.current_char == '=':
                     self.advance()
@@ -94,12 +110,15 @@ class Lexer:
                 else:
                     return Token(TType.GT, '>')
 
-            if self.current_char == '<':
+            elif self.current_char == '<':
                 self.advance()
                 if self.current_char == '=':
                     self.advance()
                     return Token(TType.LTE, '<=')
                 else:
                     return Token(TType.LT, '<')
+
+            else:
+                self.error()
 
         return Token(TType.EOF, None)
